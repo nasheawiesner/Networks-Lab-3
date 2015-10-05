@@ -54,27 +54,21 @@ public class Receiver {
                 byte[] rec = receive.recieveSetup();
                 if(rec[0]!=receive.base)
                     receive.outstanding.add(rec[0]);
-                else
+                else{
                     receive.base++;
+                    while(receive.outstanding.contains(receive.base)){
+                        receive.base++;}
+                }   
                 System.out.print("Packet " + rec[0] + " is received,send Ack"+ rec[0] +", window " );
                 receive.printWindow();
                 System.out.println();
-//            try {
-//                // Cause the port's still open. Do we always have to do this?
-//                Thread.sleep(400);
-//            } catch (InterruptedException ex) {
-//                System.out.println("Interrupted Exception");
-//            }
                 receive.sendAck();
                 
             }
             receive.receiverSocket.close();
       
     }
-    
-//    static class SetupPacket {
-//        public byte base, winSz;
-//    }
+
     
     static class Ack {
         public byte ack;
@@ -84,10 +78,8 @@ public class Receiver {
         try {
             
             InetAddress IPAddress = InetAddress.getByName("localhost");
-            // byte[] sendData = new byte[1024];
             DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, IPAddress, 9874);
             senderSocket.send(sendPkt);
-            //senderSocket.close();
         } catch (SocketException ex) {
             System.out.println("Opening socket 9874 failed.");
         } catch (UnknownHostException ex) {
@@ -99,13 +91,10 @@ public class Receiver {
 
     public byte[] getData(byte[] rcvData) {
         try {
-            
-            // byte[] rcvData = new byte[1024];
             DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
             receiverSocket.receive(rcvPkt);
             InetAddress IPAddress = rcvPkt.getAddress();
             int port = rcvPkt.getPort();
-            //receiverSocket.close();
         } catch (SocketException ex) {
             System.out.println("Opening socket 9876 failed.");
         } catch (IOException ex) {
@@ -117,7 +106,6 @@ public class Receiver {
     public byte[] recieveSetup() {
         byte[] rcvData = new byte[1];
         getData(rcvData);
-        //SetupPacket sp = new SetupPacket();
         curPack = rcvData[0];
         return rcvData;
     }

@@ -24,10 +24,9 @@ import java.util.HashSet;
  */
 public class Sender {
 
-    /**
-     * @param args the command line arguments
-     */
     HashSet<Byte> outstanding = new HashSet();
+    HashSet<Byte> completed = new HashSet();
+    HashSet<Byte> drop = new HashSet();
     byte winSz;
     byte maxSeq;
     byte base;
@@ -67,8 +66,12 @@ public class Sender {
         getData(rcvData);      
         if (rcvData[0] == base) {
             base++;
+            while(completed.contains(base)){
+                base++;
+            }
         } else {
             outstanding.remove(rcvData[0]);
+            completed.add(rcvData[0]);
         }
         System.out.print("Ack" + rcvData[0] + " is received, window");
         printWindow();
@@ -118,45 +121,53 @@ public class Sender {
             send.maxSeq = scan.nextByte();
             System.out.println();
             System.out.print("Select the packet(s) that will be dropped: ");
-            //ArrayList<Integer> dropPackets = new ArrayList<>();
-            //Arrays.asList(in.nextLine().split(",")).forEach((packetToDrop) -> dropPackets.add(Integer.parseInt(packetToDrop)));
-            String drop = scan.next();
+            //ArrayList<Byte> dropPackets = new ArrayList<>();
+            //String drop = scan.next();
+            Arrays.asList(scan.next().split(",")).forEach((packetToDrop) -> send.drop.add(Byte.parseByte(packetToDrop)));
+            
             
             //DatagramSocket receiverSocket = new DatagramSocket(9874);
             System.out.println();
             send.base = 0;
+            boolean print = true;  
             for(byte i =0;i <send.maxSeq;i++){
+              
+                for(byte j = send.base; j<send.base + send.winSz;j++){
+                     if(j<send.maxSeq){
+                         if(send.outstanding.contains(j)){
+                           //do nothing
+                         }else if (!send.outstanding.contains(j) && !send.completed.contains(j)){ //packet has not been sent yet
+                              if(send.drop.contains(j)){ //packet is to be dropped
+                                  if(print){
+                                    System.out.print("Packet " + j + " is sent, window");
+                                    send.printWindow();
+                                    System.out.println();
+                                    print = false;
+                                  }
+                              }else{ //send packet
+                                send.sendData(new byte[]{j});
+                                send.outstanding.add(j);
+                                System.out.print("Packet " + j + " is sent, window");
+                                send.printWindow();
+                                System.out.println();
+                              }
+                        }
+                     }    
+                        
+                }    
                 
-                
-                send.sendData(new byte[]{(byte)i});
-                send.outstanding.add(i);
-                System.out.print("Packet " + i + " is sent, window");
-                send.printWindow();
-                System.out.println();
                 send.ackSetup();
                 
             }
+            send.sendData(new byte[]{2});
+            send.outstanding.add((byte)2);
+            System.out.print("Packet " + 2 + " is sent, window");
+            send.printWindow();
+            System.out.println();
             send.senderSocket.close();
-//        for(int i = 0; i<maxSeq; i++){
-//            DatagramSocket senderSocket;
-//            try {
-//                senderSocket = new DatagramSocket(9877);
-//                InetAddress IPAddress = InetAddress.getByName("localhost");
-//                byte[] sendData = new byte[1024];
-//                DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, IPAddress, 9876);
-//                senderSocket.send(sendPkt);
-//                System.out.print("Packet " + i + " is sent, window");
-//                printWindow(winSz,i,maxSeq);
-//                System.out.println();
-//            } catch (Exception ex) {
-//                // don't care
-//                System.out.println(ex.getStackTrace());
-//            }
-       
+
         }
         
-        
-        // TODO code application logic here
     }
     
 
