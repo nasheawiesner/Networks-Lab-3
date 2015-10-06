@@ -33,14 +33,15 @@ public class Sender {
     byte base;
     DatagramSocket senderSocket;
     Timer packet;
-    TimerTask timerTask = new TimerTask() 
-    {
-         @Override
-         public void run() 
-        {
-          new Thread(timerTask).start(); //do something
-         }
-     } ;
+    class MyTimerTask extends TimerTask{byte seqNum}
+//    TimerTask timerTask = new TimerTask() 
+//    {
+//         @Override
+//         public void run() 
+//        {
+//          new Thread(timerTask).start(); //do something
+//         }
+//     } ;
 
     public Sender() {
         try {
@@ -70,6 +71,19 @@ public class Sender {
         public void sendSetup() {
         sendData(new byte[]{(byte)base, (byte)winSz});
     }
+        
+   public TimerTask factoryTimeout(){
+       
+       TimerTask task = new TimerTask(){
+        byte seqNum=-1;
+        @Override
+         public void run() 
+        {
+          // if()
+         }
+       };
+          return task;     
+   }     
 
     public void ackPacket() {
         byte[] rcvData = new byte[1];
@@ -140,9 +154,13 @@ public class Sender {
             Arrays.asList(scan.next().split(",")).forEach((packetToDrop) -> send.drop.add(Byte.parseByte(packetToDrop)));
             System.out.println();
             send.base = 0;
+            TimerTask[] timers = new TimerTask[send.winSz];
+            for(int k=0;k < timers.length;k++){
+                timers[k] = send.factoryTimeout();
+            }
             boolean print = true; 
             send.sendData(new byte[] {send.winSz,send.maxSeq});
-            System.out.println("Send window's size and maximum seq.number to the receiver");
+            System.out.println("Send window's size and maximum seq. number to the receiver");
             send.ackSetup();
             for(byte i =0;i <send.maxSeq;i++){//run till all packets are sent
               
@@ -162,8 +180,11 @@ public class Sender {
                               }else{ //send packet
                                 send.sendData(new byte[]{j});
                                 send.outstanding.add(j);
-                                send.packet = new Timer(Byte.toString(j));
-                                send.packet.schedule(send.timerTask, 120000);//start timer
+                                for(byte e = 0; e<timers.length;e++){
+                                    if(timers[e].seqNum == -1)
+                                    
+                                }
+                                send.packet.schedule(send.timerTask, 2000);//start timer
                                 System.out.print("Packet " + j + " is sent, window");
                                 send.printWindow();
                                 System.out.println();
@@ -174,7 +195,7 @@ public class Sender {
                 }    
                 
                 send.ackPacket();
-               send.timerTask.cancel();
+               //send.ti.cancel();
                 //stop timer
                 
             }
