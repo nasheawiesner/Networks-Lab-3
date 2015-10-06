@@ -42,16 +42,10 @@ public class Receiver {
     }
     public static void main(String[] args) {
             Receiver receive = new Receiver();
-            Scanner scan = new Scanner(System.in);
-            System.out.print("Enter the window’s size on the sender: ");
-            receive.winSz = scan.nextByte();
-            System.out.println();
-            System.out.print("Enter the maximum sequence number on the sender: ");
-            receive.maxSeq = scan.nextByte();
-            System.out.println();
             receive.base = 0;
+            byte[] setup = receive.recieveSetup();
             for(byte i =0;i <receive.maxSeq;i++){
-                byte[] rec = receive.recieveSetup();
+                byte[] rec = receive.receivePacket();
                 if(rec[0]!=receive.base)
                     receive.outstanding.add(rec[0]);
                 else{
@@ -104,6 +98,15 @@ public class Receiver {
     }
     
     public byte[] recieveSetup() {
+        byte[] rcvData = new byte[2];
+        getData(rcvData);     
+        winSz = rcvData[0];
+        maxSeq = rcvData[1];
+        sendData(new byte[]{(byte)-1},receiverSocket);
+        return rcvData;
+    }
+    
+    public byte[] receivePacket(){
         byte[] rcvData = new byte[1];
         getData(rcvData);
         curPack = rcvData[0];

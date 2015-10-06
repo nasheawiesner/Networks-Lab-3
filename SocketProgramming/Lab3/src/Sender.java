@@ -11,6 +11,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.HashSet;
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -31,6 +32,15 @@ public class Sender {
     byte maxSeq;
     byte base;
     DatagramSocket senderSocket;
+    Timer packet;
+    TimerTask timerTask = new TimerTask() 
+    {
+         @Override
+         public void run() 
+        {
+          new Thread(timerTask).start(); //do something
+         }
+     } ;
 
     public Sender() {
         try {
@@ -61,7 +71,7 @@ public class Sender {
         sendData(new byte[]{(byte)base, (byte)winSz});
     }
 
-    public void ackSetup() {
+    public void ackPacket() {
         byte[] rcvData = new byte[1];
         getData(rcvData);      
         if (rcvData[0] == base) {
@@ -76,6 +86,12 @@ public class Sender {
         System.out.print("Ack" + rcvData[0] + " is received, window");
         printWindow();
         System.out.println();
+    }
+    
+    public void ackSetup(){
+        byte[] rcvData = new byte[1];
+        getData(rcvData);
+        System.out.println("Receive confirmation from the receiver");
     }
 
     public void sendData(byte[] sendData) {
@@ -121,24 +137,23 @@ public class Sender {
             send.maxSeq = scan.nextByte();
             System.out.println();
             System.out.print("Select the packet(s) that will be dropped: ");
-            //ArrayList<Byte> dropPackets = new ArrayList<>();
-            //String drop = scan.next();
             Arrays.asList(scan.next().split(",")).forEach((packetToDrop) -> send.drop.add(Byte.parseByte(packetToDrop)));
-            
-            
-            //DatagramSocket receiverSocket = new DatagramSocket(9874);
             System.out.println();
             send.base = 0;
-            boolean print = true;  
-            for(byte i =0;i <send.maxSeq;i++){
+            boolean print = true; 
+            send.sendData(new byte[] {send.winSz,send.maxSeq});
+            System.out.println("Send window's size and maximum seq.number to the receiver");
+            send.ackSetup();
+            for(byte i =0;i <send.maxSeq;i++){//run till all packets are sent
               
-                for(byte j = send.base; j<send.base + send.winSz;j++){
+                for(byte j = send.base; j<send.base + send.winSz;j++){//send all unsent packets in window
                      if(j<send.maxSeq){
                          if(send.outstanding.contains(j)){
                            //do nothing
                          }else if (!send.outstanding.contains(j) && !send.completed.contains(j)){ //packet has not been sent yet
                               if(send.drop.contains(j)){ //packet is to be dropped
                                   if(print){
+                                    send.outstanding.add(j);  
                                     System.out.print("Packet " + j + " is sent, window");
                                     send.printWindow();
                                     System.out.println();
@@ -147,6 +162,8 @@ public class Sender {
                               }else{ //send packet
                                 send.sendData(new byte[]{j});
                                 send.outstanding.add(j);
+                                send.packet = new Timer(Byte.toString(j));
+                                send.packet.schedule(send.timerTask, 120000);//start timer
                                 System.out.print("Packet " + j + " is sent, window");
                                 send.printWindow();
                                 System.out.println();
@@ -156,15 +173,11 @@ public class Sender {
                         
                 }    
                 
-                send.ackSetup();
+                send.ackPacket();
+               send.timerTask.cancel();
+                //stop timer
                 
             }
-            send.sendData(new byte[]{2});
-            send.outstanding.add((byte)2);
-            System.out.print("Packet " + 2 + " is sent, window");
-            send.printWindow();
-            System.out.println();
-            send.senderSocket.close();
 
         }
         
